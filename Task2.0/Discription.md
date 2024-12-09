@@ -1,4 +1,3 @@
-Description
 # DISCRIPTION
 
 Below you will find a dataset for used_car sale prices along with other information about the cars. 
