@@ -1,0 +1,4 @@
+# Description
+Halloween has passed but Gautham and Gaurav are still on a lookout for pumpkins as theirs were eaten up by Dino Tim. Gaurav instructs Freyja - MANAS' autonomous UAV to go to the local market and send over images of viable pumpkins. But it has rained in Manipal and latency is low, so Freyja is only able to share a csv file containing various features about the pumpkins it found. Gautham thankfully has a datasheet that contains the same data for a certain number of pumpkins, which you can use to predict what pumpkins have been found by Freyja.
+
+There are two csv files given, Gotem_Pumpkins.csv and Freyja_Pumpkins.csv. Use the Gotem_Pumpkins.csv file to train your model, and use the model to predict the kind of Pumpkins in the Freyja_Pumpkins.csv file, and output the accuracy you get. Do not use the test file to train your model.
