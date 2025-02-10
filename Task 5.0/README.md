@@ -39,7 +39,7 @@ The interact topic connects the two nodes.
 ## rqt_graph: rqt_graph
 This can be visualized using the graph.
 
-![rqt graph](rqt_graph.png.png)
+![rqt graph](rqt_graph.png)
 
 # Execution
 ## bob_node: ros2 run my_package bob_node
