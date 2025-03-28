@@ -40,6 +40,7 @@ I expected vacation photos having the most miss-classified data points, but the 
 This model has 2 pairs of convolutional layers and 4 dense layers. To prevent overfitting, I added 
 
 ```early_stopping = EarlyStopping(monitor='val_accuracy',patience=2,restore_best_weights=True )```
+
 This line helps to monitor train accuracy, if high over 2 consequitive eopch, it stops learning. 
 
 This helps overfitting and epoch can be kept bigger as this line will terminate it if overfitting.
