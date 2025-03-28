@@ -17,27 +17,26 @@ Timothy is a visual learner, so he needs to see visualizations like confusion ma
 
 ## Documentation
 ### CNN model 1.0
-![summary](image-2.png)
+![summary](image-3.png)
+
 This approach contained 3 layers of Convolution and max pooling with increasing filters. Later on there was only one dense layer, before 
 
 the output layer with the softmax function. All the other layers used ReLu activation function.
 ### Accessing performance
 Even though the epoch seems to decrease, the validation accuracy shows overfitting. This can be seen as over 15 epochs the accuracy of the 
-
 training data reached 99%, but accuracy of the test data is 68%.
 
 ### Notes for model 2.0
 Increase the  layers in dense layers, gradually decrease it to no of categories.
-
 Adding callback parameter, to track accuracy and not let it exceed too much, avoiding overfitting.
 
 ### Observation
-I expected vacation photos having the most miss-classified data points, but the confusion matrix shows there was more misclassification 
-
-among similar looking leaves like the apple and peach.
+I expected vacation photos having the most miss-classified data points, but the confusion matrix shows there was more misclassification among similar looking leaves like the apple and peach.
 
 ### CNN model 2.0
+
 ![summary](image.png)
+
 This model has 2 pairs of convolutional layers and 4 dense layers. To prevent overfitting, I added 
 ```early_stopping = EarlyStopping(monitor='val_accuracy',patience=2,restore_best_weights=True )
 ```
@@ -48,6 +47,7 @@ This helps overfitting and epoch can be kept bigger as this line will terminate 
 The accuracy increases a bit. The learning terminates at epoch 6 at 99.43% accuracy for train. More optimization can be done, to get better performance over test data. 
 
 Droupout can be used to regularise the deeplayers, decreasig overfitting.
+
 ![cost vs epoch](image-1.png)
 
 Accuracy = 0.6984323432343235
