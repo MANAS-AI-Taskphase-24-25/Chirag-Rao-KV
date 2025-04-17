@@ -18,6 +18,7 @@
 #include <cmath> 
 #include "Astar.cpp"
 #include <sensor_msgs/msg/laser_scan.hpp>
+
 class MapSubscriber : public rclcpp::Node {
 public:
     MapSubscriber()
@@ -29,12 +30,7 @@ public:
 
         goal_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
             "/goal_pose", 10, std::bind(&MapSubscriber::goal_callback, this, std::placeholders::_1));
-        
-           /* lidar_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-                "/scan", rclcpp::QoS(10),
-                std::bind(&MapSubscriber::lidar_callback, this, std::placeholders::_1));*/
-            
-            
+
         path_pub_ = this->create_publisher<nav_msgs::msg::Path>("/planned_path", 10);
         timer_ = this->create_wall_timer(
             std::chrono::milliseconds(67),
@@ -49,8 +45,6 @@ private:
     Astar pathfinder;
     bool map_received = false;
     bool goal_received = false; 
-    //rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr lidar_sub_; 
-    //std::vector<std::pair<float,float>> map_points;
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr subscription_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_;
@@ -65,12 +59,12 @@ private:
         void get_bot_pos(const geometry_msgs::msg::TransformStamped &transform_stamped) {
             double robot_x = transform_stamped.transform.translation.x;
             double robot_y = transform_stamped.transform.translation.y;
-            RCLCPP_INFO(this->get_logger(), "bot real world position: (%.4f,%.4f )", robot_x, robot_y);
+            
             float x = (robot_x - map_->info.origin.position.x - 0.025) / map_->info.resolution;
             float y = (robot_y - map_->info.origin.position.y - 0.025) / map_->info.resolution;
             bot_pos.first = static_cast<int>(std::round(x));
             bot_pos.second = static_cast<int>(std::round(y));
-            RCLCPP_INFO(this->get_logger(), "float (%.2f,%.2f) Updated bot position: (%d, %d) and resolution is %.2f",x,y, bot_pos.first, bot_pos.second,map_->info.resolution);
+            RCLCPP_INFO(this->get_logger(), "Recieved  bot position");
         }
     
     
@@ -85,7 +79,6 @@ private:
                 end_pos.first = static_cast<int>(std::round((goal_in_map.pose.position.x - map_->info.origin.position.x - 0.025) / map_->info.resolution));
                 end_pos.second = static_cast<int>(std::round((goal_in_map.pose.position.y - map_->info.origin.position.y - 0.025) / map_->info.resolution));
                 RCLCPP_INFO(this->get_logger(), "Transformed goal position: (%.2f, %.2f) in resolution %.2f", goal_in_map.pose.position.x, goal_in_map.pose.position.y,map_->info.resolution);
-                //RCLCPP_INFO(this->get_logger(), "Goal grid coordinates: (%d, %d)", end_pos.first, end_pos.second);
                 goal_received = true;
             } catch (tf2::TransformException &ex) {
                 RCLCPP_ERROR(this->get_logger(), "Failed to transform goal from %s to map: %s", 
@@ -117,10 +110,8 @@ private:
         int height = map_->info.height;
         RCLCPP_INFO(this->get_logger(), "Going from (%d, %d) to (%d, %d)", 
                     bot_pos.first, bot_pos.second, end_pos.first, end_pos.second);
-        RCLCPP_INFO(this->get_logger(), "Astar initialised and finding path (%d,%d)",width,height);
 
         pathfinder.Get_map(grid,bot_pos, end_pos, width, height);
-        RCLCPP_INFO(this->get_logger(), "Astar initialised and finding path; seg error in path var");
         path = pathfinder.Find_path();
         RCLCPP_INFO(this->get_logger(), "got path");
         //map points are added to force make borders based on lidar data put lidar call back in timer to call frequently
@@ -155,7 +146,6 @@ private:
                 pose.pose.position.x = coord[1] * msg->info.resolution + msg->info.origin.position.x + 0.025;  
                 pose.pose.position.y = coord[0] * msg->info.resolution + msg->info.origin.position.y + 0.025;
                 pose.pose.position.z = 0.0;
-                pose.pose.orientation.w = 1.0;
                 ros_path.poses.push_back(pose);
             }
             RCLCPP_INFO(this->get_logger(), "grid to path resolution used: %.2f",msg->info.resolution);

@@ -153,29 +153,19 @@ private:
     
     std::stack<std::vector<int>> BackTrack(){
         std::stack<std::vector<int>> path;
-        printf("\nbacktracking assignment \n");
         int parent_x = End.first;
         int parent_y = End.second;
-        printf("\n impliments here backtracking\n");
         while(parent_x != Start.first || parent_y != Start.second){
-            printf("\n in loop %d %d\n",parent_x,parent_y);
             path.push({parent_x, parent_y}); 
-            printf("\npushed\n");  
             Block* node = &block[parent_x][parent_y];
             if(node->parent[0] == -1 && node->parent[1] == -1){
-                printf("\n in loop break\n");
                 break;
-               }
-               printf("\n new x\n");  
-            
+               }            
             parent_x = node->parent[0];   
-            printf("\n new y\n");  
             parent_y = node->parent[1];
             if(encoded_data[parent_x][parent_y] == 100){
-                printf("Blockage accessed\n");
             }
         }
-        printf("returning path");
         return path;
     }
 
@@ -187,32 +177,25 @@ private:
             encoded_data.clear();
              block.clear();
              Obstacle_coordinates.clear();
-            printf("\n\nCleared data\n\n");
         }
 public:
 std::stack<std::vector<int>> path;    
 
     void Get_map(const std::vector<std::vector<int>> data, std::pair<int,int> sta, std::pair<int,int> en, int b, int l)
-     {  printf("\nremoved pointer x error seg fault at teh begenning?  recieved (%d,%d)",l,b);
+     {  
         while (!path.empty()) {
             path.pop();
         }
-        printf("\nCleared previous path %ld,%ld\n",data.size(),data[0].size());
-        printf("%zu\n", data.size());
         length = l;
-        printf("\nlength done\n");  
         bredth = b;
-        printf("\nbredth done\n");
         blocked_no = 0;
-        printf("\nresize error \n");
         encoded_data.resize(data.size(), std::vector<int>(data[0].size()));
-        printf("resize error Block");
         block.resize(data.size(), std::vector<Block>(data[0].size()));
         Start.first = sta.second;
         Start.second = sta.first;
         End.second = en.first;
         End.first = en.second;
-        printf("shape recieved %d x %d",l,b);
+        
         if (Start.first < 0 || Start.second >= b || Start.second < 0 || Start.first>= l||
             End.first < 0 || End.second >= b || End.second< 0 || End.first>= l) {
             std::cerr << "Start or goal is out of bounds!" << std::endl;
@@ -240,33 +223,25 @@ std::stack<std::vector<int>> path;
                 } else {
                     status = 1;  // Free
                 }
-                   /* for(std::vector<std::pair<float, float>>::size_type k = 0; k < lidar.size(); ++k) {
-                        if((static_cast<int>(lidar[k].second) - Start.first) == i && (static_cast<int>(lidar[k].first)-Start.second )== j)
-                        {printf(" (%d,%d) ",i,j);
-                            status = 0;  // if lidar says, force it to zero
-                            }
-                    }*/
-
                 block[i][j] = Block(i, j, status); 
         }
     }   
-        printf("\nCoush_in_calling\n");
         Cushioning();
         block[Start.first][Start.second].parent[0] = -1;
         block[Start.first][Start.second].parent[1] = -1;
+        // boolean to check for end pos on obstale. Used to arrest path finding and return
         if(data[End.first][End.second] == 100){
             end_blocked = true;
         }
         else{
             end_blocked = false;
         }
-
-        printf("\nAstar constructor has been initialised\n");
     }
 
 
     void Cushioning(){
         int nx,ny;
+        //by default uses 2 blocks for inflation.
         std::vector<std::pair<int,int>> directions = {
             {1,0},{-1,0},{0,1},{0,-1},{1,1},{-1,-1},{1,-1},{-1,1},
         {2,0},{-2,0},{0,2},{0,-2},{2,2},{-2,-2},{2,-2},{-2,2}};
@@ -285,19 +260,15 @@ std::stack<std::vector<int>> path;
     //    # 0:not accessable  1:Untouched   2:Start 3:End   4:Closed  5:Open  6: path
 
     std::stack<std::vector<int>> Find_path() {
-        printf("\nFind path inside \n");
         std::stack<std::vector<int>> output;
 
-        if (end_blocked) {
-            printf("\nEnd position is in blocked area, no valid path exists\n");
+        if (end_blocked) {                          // this is where the end block is checked returns the start pos if blocked.
             output.push({Start.first, Start.second});
             return output;
         }
         
         open_blocks.push(&block[Start.first][Start.second]); 
-        printf("\nseg error? in open blocks \n");
         Block* current = &block[Start.first][Start.second];
-        printf("\nStarting find function\n");
         while (current->x != End.first || current->y != End.second) { 
             current = open_blocks.top();
             open_blocks.pop(); 
@@ -309,8 +280,7 @@ std::stack<std::vector<int>> path;
                 return output;
             }
         }
-        printf("\nbacktrack called\n");
-        output = BackTrack();
+        output = BackTrack(); // backtracks from end using parents to get back to start.
         Clear_data();
         return output;
     }

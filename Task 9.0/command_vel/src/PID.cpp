@@ -22,13 +22,12 @@ public:
         inte.resize(axis, 0.0);
         dere.resize(axis, 0.0);
     }
-
+    //pid output for multiple axis
     std::vector<double> Command_output(std::vector<double> expected,std::vector<double> current) {
         std::vector<double> output(axis, 0.0);
 
         for(int i = 0;i<axis;i++){
             error[i] = expected[i] - current[i];
-            printf("eorror %f",error[i]);
             inte[i] += error[i];
             dere[i] = error[i] - pre_error[i];
             output[i] = K[0]*error[i] + K[1]*inte[i] + K[2]*dere[i];
@@ -37,7 +36,7 @@ public:
         }
         return output;
     }
-
+    //pid output for single axis
     double Command_output(double expected,double current) {
         double output  = 0;
                 error[0] = expected- current;
@@ -54,8 +53,6 @@ public:
         pre_error.resize(axis, 0.0);
         inte.resize(axis, 0.0);
         dere.resize(axis, 0.0);
-        printf("\npid cleared\n");
-
     }
     
 };

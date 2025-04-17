@@ -38,25 +38,21 @@ Stanley stanley = Stanley(1);
     }
 
 private:
-    double twist_max = 0;
-    double twist_min = 0;
     double yaw,target_twist,yaw_out;
-
-    
-
+    double vel = 0;  
 
     tf2_ros::Buffer tf_buffer_; 
     tf2_ros::TransformListener tf_listener_;
-    std::pair<double,double> end_pos;
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_; 
 
+    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr goal_sub_; 
     rclcpp::Subscription<nav_msgs::msg::Path>::SharedPtr path_sub_;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
+
+    std::pair<double,double> end_pos;
     std::vector<double> current;
     std::vector<double> target;
     std::vector<double> pre_target; // used for stanley, update it after control commands are executed
-    double vel = 0;  
-    double end_yaw;   
+   
 
 
     void goal_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
@@ -73,6 +69,7 @@ private:
     }
     
     void path_callback(const nav_msgs::msg::Path::SharedPtr msg)
+    //path is published at 15 Hz so the whole vel commands are inside path callback to keep the cmd_vel frequency at 15Hz.
     {   
         geometry_msgs::msg::Twist cmd_msg;
 
@@ -81,16 +78,13 @@ private:
         cmd_msg.linear.x = 0;
         cmd_msg.linear.y = 0;
         cmd_msg.angular.z = 0; 
-        cmd_pub_->publish(cmd_msg);
+        cmd_pub_->publish(cmd_msg);     //publishes 0 vel commands for invalid end or small path.
         return;
     }
         else
         {
         RCLCPP_INFO(this->get_logger(), "Received new path with %zu poses", msg->poses.size());
-
-
         geometry_msgs::msg::PoseStamped target_pose = msg->poses[0];
-
         geometry_msgs::msg::TransformStamped transformStamped;
         try {
             transformStamped = tf_buffer_.lookupTransform(
@@ -107,16 +101,8 @@ private:
             transformStamped.transform.rotation.z,
             transformStamped.transform.rotation.w
         );
-        geometry_msgs::msg::Pose pose = target_pose.pose;
+        //geometry_msgs::msg::Pose pose = target_pose.pose;
 
-        tf2::Quaternion q_end(
-            pose.orientation.x,
-            pose.orientation.y,
-            pose.orientation.z,
-            pose.orientation.w
-        );
-        
-        
         //linear 
         current.resize(2);
         target.resize(2);
@@ -130,18 +116,9 @@ private:
         RCLCPP_INFO(this->get_logger(), "start pid linear");
         
 
-        std::vector<double> linear_out = linear.Command_output(target,current); // PID controls here
+        std::vector<double> linear_out = linear.Command_output(target,current); // PID controls here      
 
-        //yaw
-        
-
-        //double yaw_out = Yaw.Command_output(target_twist,yaw); //PID controls here commented out to test stanley
-      
-
-        RCLCPP_INFO(this->get_logger(), "Current: (%.2f, %.2f, %.2f), Target: (%.2f, %.2f, %.2f)", current[0], current[1], yaw, target[0], target[1], target_twist);
-        
-      
-        // capping the speed
+       // capping the speed
         double max_vel = 0.1;
         if(linear_out[0]> max_vel){
             linear_out[0] = max_vel;
@@ -158,25 +135,21 @@ private:
        
        
         // reached goal
-        
+        double dx = end_pos.first - current[0];
+        double dy = end_pos.second - current[1];
+        double distance = sqrt(dx * dx + dy * dy);
         yaw = tf2::getYaw(q);
-        end_yaw = tf2::getYaw(q_end);
         // the target and current pos is used to get target yae
         double delta_y = target[1] - current[1];
         double delta_x = target[0] - current[0];
         target_twist = atan2(delta_y, delta_x); 
-        // When the path is opposite to its orientation, the -ve x and -ve y cancells out so add the -ve sign.
-        /*if(delta_x<0 && delta_y <0){
-            target_twist = - atan2(delta_y, delta_x); 
-        }*/
+
         
         RCLCPP_INFO(this->get_logger(), "target yaw %.2f:",target_twist);
         yaw_out = stanley.yaw_command(current,target,pre_target,target_twist,yaw,vel);
         vel = std::hypot(linear_out[0], linear_out[1]);
         
-        double dx = end_pos.first - current[0];
-        double dy = end_pos.second - current[1];
-        double distance = sqrt(dx * dx + dy * dy);
+ 
         if (distance <=0.075) {
             RCLCPP_INFO(this->get_logger(), "set all to 0, reached goal");
                linear_out[0] = 0;
@@ -195,7 +168,6 @@ private:
         cmd_pub_->publish(cmd_msg);
         pre_target[0] = target[0];
         pre_target[1] = target[1];
-        RCLCPP_INFO(this->get_logger(), "Z goal is: %f",end_yaw);
     
         }
     }
