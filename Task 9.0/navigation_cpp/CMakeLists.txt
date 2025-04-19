@@ -18,7 +18,11 @@ include_directories(
   ${ament_INCLUDE_DIRS}
 )
 
-add_executable(map_subscriber src/navigation.cpp src/Astar.cpp)
+add_executable(map_subscriber 
+src/navigation.cpp 
+src/Astar.cpp 
+src/Collinear_smoothing.cpp 
+src/Bezier.cpp)
 
 ament_target_dependencies(map_subscriber
   rclcpp

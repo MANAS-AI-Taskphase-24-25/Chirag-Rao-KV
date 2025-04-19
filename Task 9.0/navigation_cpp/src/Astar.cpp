@@ -10,6 +10,8 @@
 #include <stack>
 #include <utility> 
 #include <cmath> 
+#include <algorithm>  
+#include "Collinear_smoothing.cpp"
 
 class Block
 {
@@ -78,6 +80,8 @@ class Astar {
 private:
     bool end_blocked;
     int length, bredth;
+    double tol = 1e-2;
+    Collinear_smoothing smooth = Collinear_smoothing(tol);
     std::vector<std::vector<int>> encoded_data;
     std::vector<std::vector<Block>> block;
     std::priority_queue<Block*, std::vector<Block*>, CompareBlocks> open_blocks;
@@ -178,6 +182,7 @@ private:
              block.clear();
              Obstacle_coordinates.clear();
         }
+
 public:
 std::stack<std::vector<int>> path;    
 
@@ -242,9 +247,11 @@ std::stack<std::vector<int>> path;
     void Cushioning(){
         int nx,ny;
         //by default uses 2 blocks for inflation.
+
         std::vector<std::pair<int,int>> directions = {
             {1,0},{-1,0},{0,1},{0,-1},{1,1},{-1,-1},{1,-1},{-1,1},
         {2,0},{-2,0},{0,2},{0,-2},{2,2},{-2,-2},{2,-2},{-2,2}};
+
         for(size_t   i = 0;i<Obstacle_coordinates.size();i++){
         for(int j = 0;j<16;j++){
             nx = Obstacle_coordinates[i].first + directions[j].first;
@@ -261,6 +268,8 @@ std::stack<std::vector<int>> path;
 
     std::stack<std::vector<int>> Find_path() {
         std::stack<std::vector<int>> output;
+        std::stack<std::vector<int>> output_smooth;
+
 
         if (end_blocked) {                          // this is where the end block is checked returns the start pos if blocked.
             output.push({Start.first, Start.second});
@@ -281,9 +290,20 @@ std::stack<std::vector<int>> path;
             }
         }
         output = BackTrack(); // backtracks from end using parents to get back to start.
+        if(output.size()>3)
+        {   // if there are considerable amount of points, then remove points based on colinearity otherwise pass the same waypoints;
+            output_smooth = smooth.smooth_path(output);
+           
+        }
+        else {
+            output_smooth = output;
+        }
+        printf("\n size before and after smoothing %zu, %zu",output.size(),output_smooth.size());
         Clear_data();
-        return output;
+        return output_smooth;
     }
+
+
 };
 
 

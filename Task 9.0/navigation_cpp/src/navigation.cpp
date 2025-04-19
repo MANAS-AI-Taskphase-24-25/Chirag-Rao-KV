@@ -17,7 +17,8 @@
 #include <utility> 
 #include <cmath> 
 #include "Astar.cpp"
-#include <sensor_msgs/msg/laser_scan.hpp>
+#include "Bezier.cpp"
+#include "Collinear_smoothing.cpp"
 
 class MapSubscriber : public rclcpp::Node {
 public:
@@ -43,6 +44,9 @@ public:
 private:
     std::mutex data_mutex_;
     Astar pathfinder;
+    double t  = 1e-6;
+    Collinear_smoothing smooth = Collinear_smoothing(t);   // initialising Collinearity-based path simplification
+    Bezier curve_fit = Bezier(2,10); // two axis 3 points be two consequitive points
     bool map_received = false;
     bool goal_received = false; 
     rclcpp::TimerBase::SharedPtr timer_;
@@ -92,7 +96,9 @@ private:
     
     // this will update the map and path and keep doing until the goal is reached.
     void explore() {
+        std::stack<std::vector<float>> interpolatred_path;
         std::stack<std::vector<int>>path;
+        std::stack<std::vector<float>> smoothed_path;
         if (!map_received || !goal_received) 
             return;
         std::vector<std::vector<int>> grid = Convert(map_);
@@ -117,7 +123,17 @@ private:
         //map points are added to force make borders based on lidar data put lidar call back in timer to call frequently
         
         if (!path.empty()) {
-            nav_msgs::msg::Path ros_path = convertPathToROS(path, map_);
+            std::stack<std::vector<float>> temp = ConvertToFloatStack(path);
+           
+            if(path.size()>4){
+                interpolatred_path = curve_fit.Get_curve(temp);
+                smoothed_path =smooth.smooth_path(interpolatred_path);
+           }
+           else{
+                smoothed_path = temp;
+            }
+
+            nav_msgs::msg::Path ros_path = convertPathToROS(smoothed_path, map_);
             RCLCPP_INFO(this->get_logger(), "Publishing path");
             path_pub_->publish(ros_path);
         } else {
@@ -125,7 +141,7 @@ private:
         }
     }
     
-   
+        
 
         void map_callback(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
             map_ = msg;
@@ -133,10 +149,10 @@ private:
             RCLCPP_INFO(this->get_logger(), "got the map");
         }
 
-        nav_msgs::msg::Path convertPathToROS(const std::stack<std::vector<int>>& path, const nav_msgs::msg::OccupancyGrid::SharedPtr& msg) {
+        nav_msgs::msg::Path convertPathToROS(const std::stack<std::vector<float>>& path, const nav_msgs::msg::OccupancyGrid::SharedPtr& msg) {
             nav_msgs::msg::Path ros_path;
             ros_path.header = msg->header;
-            std::stack<std::vector<int>> path_copy = path;
+            std::stack<std::vector<float>> path_copy = path;
             RCLCPP_INFO(this->get_logger(), "Converting path to ros");
             while (!path_copy.empty()) {
                 auto coord = path_copy.top();
@@ -153,6 +169,21 @@ private:
             return ros_path;    
         }
         
+        std::stack<std::vector<float>> ConvertToFloatStack(const std::stack<std::vector<int>>& int_stack) {
+            std::stack<std::vector<float>> float_stack;
+            std::stack<std::vector<int>> temp_stack = int_stack;  
+            while (!temp_stack.empty()) {
+                std::vector<int> point = temp_stack.top();
+                std::vector<float> float_point;
+                                for (int i : point) {
+                    float_point.push_back(static_cast<float>(i));
+                }
+                
+                float_stack.push(float_point);
+                temp_stack.pop();
+            }
+            return float_stack;
+        }
         
 
         std::vector<std::vector<int>> Convert(const nav_msgs::msg::OccupancyGrid::SharedPtr msg) {
