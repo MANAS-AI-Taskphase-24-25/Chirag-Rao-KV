@@ -39,7 +39,7 @@ public:
 
     std::vector<double> Command_output_foresight(std::vector<std::vector<double>>expected,std::vector<double> current) {
         std::vector<double> output(axis, 0.0);
-        std::vector<double> coeff = {0.8,0.15,0.05};
+        std::vector<double> coeff = {1,0,0};
 
         for(int i = 0;i<axis;i++){
             for(size_t j = 0;j<expected.size();j++){

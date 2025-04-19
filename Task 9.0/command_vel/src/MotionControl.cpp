@@ -13,7 +13,7 @@
 class Controller : public rclcpp::Node
 {
 public:
-double k_lin[3] ={0.2, 0.3, 0.6}; 
+double k_lin[3] ={0.4, 0.3, 0.6}; 
 //double k_twist[3] ={0.3,0.01,0.7};
 PID linear = PID(2,k_lin);
 
@@ -70,8 +70,7 @@ private:
     
     }
     
-    /// @brief 
-    /// @param msg 
+
     void path_callback(const nav_msgs::msg::Path::SharedPtr msg)
     //path is published at 15 Hz so the whole vel commands are inside path callback to keep the cmd_vel frequency at 15Hz.
     {  
