@@ -125,9 +125,10 @@ private:
         if (!path.empty()) {
             std::stack<std::vector<float>> temp = ConvertToFloatStack(path);
            
-            if(path.size()>4){
-                interpolatred_path = curve_fit.Get_curve(temp);
-                smoothed_path =smooth.smooth_path(interpolatred_path);
+            if(path.size()>4){ // irrelevant control statement as curve smoothing is is over ridden
+                //interpolatred_path = curve_fit.Get_curve(temp);
+                //smoothed_path =smooth.smooth_path(interpolatred_path);
+                smoothed_path = temp; 
            }
            else{
                 smoothed_path = temp;

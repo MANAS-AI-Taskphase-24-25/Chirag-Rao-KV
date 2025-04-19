@@ -36,6 +36,23 @@ public:
         }
         return output;
     }
+
+    std::vector<double> Command_output_foresight(std::vector<std::vector<double>>expected,std::vector<double> current) {
+        std::vector<double> output(axis, 0.0);
+        std::vector<double> coeff = {0.8,0.15,0.05};
+
+        for(int i = 0;i<axis;i++){
+            for(size_t j = 0;j<expected.size();j++){
+                error[i] += coeff[j]*(expected[i][j] - current[i]);
+            }
+            inte[i] += error[i];
+            dere[i] = error[i] - pre_error[i];
+            output[i] = K[0]*error[i] + K[1]*inte[i] + K[2]*dere[i];
+            pre_error[i] = error[i];
+            
+        }
+        return output;
+    }
     //pid output for single axis
     double Command_output(double expected,double current) {
         double output  = 0;

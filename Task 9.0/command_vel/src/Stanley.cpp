@@ -53,11 +53,7 @@ std::vector<double>local_pre_way;
             //when the heading error is very large, it causes the bot to stop, if the bot is stopped it is allowed to take large turns.
             if(vel < 0.001){
                 if(heading_error>max){
-                    output = max*2;
-                }
-                else
-                {
-                    output  = -max*2;
+                    output = heading_error;
                 }
             }
         }

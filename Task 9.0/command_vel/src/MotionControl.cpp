@@ -15,9 +15,8 @@ class Controller : public rclcpp::Node
 public:
 double k_lin[3] ={0.2, 0.3, 0.6}; 
 //double k_twist[3] ={0.3,0.01,0.7};
-PID linear_0 = PID(2,k_lin);
-PID linear_1 = PID(2,k_lin);
-PID linear_2 = PID(2,k_lin);  
+PID linear = PID(2,k_lin);
+
 //PID Yaw = PID(1,k_twist);
 Stanley stanley = Stanley(1);
 
@@ -42,7 +41,7 @@ Stanley stanley = Stanley(1);
 private:
     double yaw,target_twist,yaw_out;
     double vel = 0;  
-    std::vector<std::pair<double,double>> velocity_log;
+    std::vector<double> velocity_log;
 
     tf2_ros::Buffer tf_buffer_; 
     tf2_ros::TransformListener tf_listener_;
@@ -71,6 +70,8 @@ private:
     
     }
     
+    /// @brief 
+    /// @param msg 
     void path_callback(const nav_msgs::msg::Path::SharedPtr msg)
     //path is published at 15 Hz so the whole vel commands are inside path callback to keep the cmd_vel frequency at 15Hz.
     {  
@@ -83,7 +84,7 @@ private:
             std::size_t i;
             // reached end of path print velocity avg
             for(i = 0;i<velocity_log.size();i++){
-                velo+= sqrt(velocity_log[i].first*velocity_log[i].first + velocity_log[i].second*velocity_log[i].second);
+                velo+= velocity_log[i];
                 velocity_log.pop_back();
             }
             double avg_vel = velo/i;
@@ -152,36 +153,23 @@ private:
             RCLCPP_INFO(this->get_logger(), "Received path with %zu poses", msg->poses.size());
             RCLCPP_INFO(this->get_logger(), "Current position: (%.2f, %.2f)", current[0], current[1]);
             RCLCPP_INFO(this->get_logger(), "start pid linear");
-
+            std::vector<std::vector<double>> target;
+            target.push_back(target_0);
+            target.push_back(target_1);
+            target.push_back(target_2);
 
             //Lookahead control
-            std::vector<double> out0 = linear_0.Command_output(target_0, current);
-            std::vector<double> out1 = linear_1.Command_output(target_1, current);
-            std::vector<double> out2 = linear_2.Command_output(target_2, current);
-            std::vector<double> linear_out(2, 0.0); // assuming 2D
-            
-            for (int i = 0; i < 2; ++i) {
-                if(plus3){
-                linear_out[i] = 1* out0[i] + 0 * out1[i] + 0 * out2[i];
-            }
-            else{
-                linear_out[i] = out0[i];
-            }
-            }     
+            std::vector<double> out0 = linear.Command_output_foresight(target, current);
+        
+            double linear_out = std::sqrt(std::pow(out0[0], 2) + std::pow(out0[1], 2)); // get velocity output
 
         // capping the speed
             double max_vel = 0.15;
-            if(linear_out[0]> max_vel){
-                linear_out[0] = max_vel;
+            if(linear_out> max_vel){
+                linear_out = max_vel;
             }
-            else if(linear_out[0]< -max_vel){
-                linear_out[0] = -max_vel;
-            }
-            if(linear_out[1]> max_vel){
-                linear_out[1] = max_vel;
-            }
-            else if(linear_out[1]< -max_vel){
-                linear_out[1] = -max_vel;
+            else if(linear_out< -max_vel){
+                linear_out = -max_vel;
             }
         
         
@@ -197,30 +185,23 @@ private:
 
             
             RCLCPP_INFO(this->get_logger(), "target yaw %.2f:",target_twist);
-            vel = std::hypot(linear_out[0], linear_out[1]);
+            vel = linear_out;
             yaw_out = stanley.yaw_command(current,target_0,pre_target,target_twist,yaw,vel);
             
             if (distance <=0.075){
                
-                linear_out[0] = 0;
-                linear_out[1] = 0;
-                linear_0.clear_pid();
-                linear_1.clear_pid();
-                linear_2.clear_pid();
-                
+                linear_out = 0;
+                linear.clear_pid();
             }
 
 
             double delta = std::abs(yaw - target_twist);// if very agressive angle turn first then start moving
             if(delta>M_PI/2){
-                linear_out[0] = 0;
-                linear_out[1] = 0;
-                
+                linear_out = 0;
             }
             
-            cmd_msg.linear.x = linear_out[0];
-            cmd_msg.linear.y = linear_out[1];
-            velocity_log.push_back({linear_out[0],linear_out[1]});
+            cmd_msg.linear.x = linear_out;
+            velocity_log.push_back(linear_out);
             cmd_msg.angular.z = yaw_out; //only yaw element as no controll for roll and pitch
             cmd_pub_->publish(cmd_msg);
             pre_target[0] = target_0[0];
